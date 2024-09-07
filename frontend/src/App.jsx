@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { loadGapiInsideDOM, loadAuth2 } from "gapi-script";
 import "./App.css";
 import "tailwindcss/tailwind.css";
-
+import axios from "axios";
 
 const UserCard = (props) => {
   const getDate = (index) => {
@@ -34,9 +34,43 @@ const UserCard = (props) => {
   );
 };
 
+const ProofModal = ({ proof, isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  const renderJson = (obj, indent = 0) => {
+    return Object.entries(obj).map(([key, value]) => (
+      <div key={key} style={{ marginLeft: `${indent * 20}px` }}>
+        <span className="font-semibold">{key}: </span>
+        {typeof value === 'object' && value !== null ? (
+          <div>{renderJson(value, indent + 1)}</div>
+        ) : (
+          <span>{JSON.stringify(value)}</span>
+        )}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+      <div className="bg-white p-6 rounded-lg max-w-2xl max-h-[80vh] overflow-auto">
+        <h2 className="text-xl font-bold mb-4">Proof</h2>
+        <div className="font-mono text-sm">{renderJson(proof)}</div>
+        <button
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const GoogleLogin = () => {
   const [user, setUser] = useState(null);
   const [gapi, setGapi] = useState(null);
+  const [proof, setProof] = useState(null);
+  const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
@@ -54,18 +88,12 @@ const GoogleLogin = () => {
   useEffect(() => {
     if (!gapi) return;
 
-
     const setAuth2 = async () => {
       try {
-        const auth2 = await loadAuth2(
-          gapi,
-          GOOGLE_CLIENT_ID,
-          "",
-          {
-            scope:
-              "https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read https://www.googleapis.com/auth/fitness.location.read",
-          }
-        );
+        const auth2 = await loadAuth2(gapi, GOOGLE_CLIENT_ID, "", {
+          scope:
+            "https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read https://www.googleapis.com/auth/fitness.location.read",
+        });
 
         if (auth2.isSignedIn.get()) {
           updateUser(auth2.currentUser.get());
@@ -116,48 +144,27 @@ const GoogleLogin = () => {
     }
 
     try {
-      const response = await fetch(
-        "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate",
+      const response = await axios.post(
+        "http://localhost:3000/get-daily-steps",
+        {}, // No request body needed for this example
         {
-          method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            aggregateBy: [
-              {
-                dataTypeName: "com.google.step_count.delta",
-                dataSourceId:
-                  "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps",
-              },
-            ],
-            bucketByTime: { durationMillis: 86400000 }, // 1 day
-            startTimeMillis:
-              new Date(new Date().setHours(0, 0, 0, 0)).getTime() -
-              7 * 86400000, // start of the day 7 days ago
-            endTimeMillis: new Date(
-              new Date().setHours(23, 59, 59, 999)
-            ).getTime(), // end of the current day
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error fetching fitness data:", errorData);
-        return;
-      }
-
-      const fitnessData = await response.json();
-      console.log(fitnessData);
-      const steps = fitnessData.bucket.map((bucket) => {
-        const stepCount = bucket.dataset[0].point.reduce(
-          (total, point) => total + point.value[0].intVal,
-          0
-        );
-        return stepCount;
-      });
+      const proof = response.data.proof;
+      setProof(proof);
+      const JsonProof = JSON.parse(proof.claimInfo.parameters);
+      const steps = JSON.parse(JsonProof.responseMatches[0].value).bucket.map(
+        (bucket) => {
+          const stepCount = bucket.dataset[0].point.reduce(
+            (total, point) => total + point.value[0].intVal,
+            0
+          );
+          return stepCount;
+        }
+      );
 
       setUser((prevUser) => ({
         ...prevUser,
@@ -182,8 +189,20 @@ const GoogleLogin = () => {
     return (
       <div className="container mx-auto p-4">
         <UserCard user={user} />
+        {proof && (
+          <button
+            onClick={() => setIsProofModalOpen(true)}
+            className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            View ZK Proof
+          </button>
+        )}
+        <ProofModal
+          proof={proof}
+          isOpen={isProofModalOpen}
+          onClose={() => setIsProofModalOpen(false)}
+        />
         <div
-          id=""
           className="btn logout mt-4 p-2 bg-red-500 text-white rounded cursor-pointer"
           onClick={signOut}
         >
