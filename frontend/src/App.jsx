@@ -4,9 +4,9 @@ import "./App.css";
 import "tailwindcss/tailwind.css";
 import axios from "axios";
 import { ConnectButton } from "thirdweb/react";
-import { client } from "./main";
 import { createWallet } from "thirdweb/wallets";
 import { arbitrumSepolia } from "thirdweb/chains";
+import { SignProtocolClient, SpMode, EvmChains } from '@ethsign/sp-sdk'
 
 const UserCard = (props) => {
   const getDate = (index) => {
@@ -70,12 +70,28 @@ const ProofModal = ({ proof, isOpen, onClose }) => {
   );
 };
 
+
+
 const GoogleLogin = () => {
   const [user, setUser] = useState(null);
   const [gapi, setGapi] = useState(null);
   const [proof, setProof] = useState(null);
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  const client = new SignProtocolClient(SpMode.OnChain, {
+    chain: EvmChains.arbitrumSepolia,
+  })
+
+  const fn = async () => {
+    const createAttestationRes = await client.createAttestation({
+      schemaId: '0xd8',
+      data: { Greet: 'Helloworld' },
+      indexingValue: "123"
+    })
+    console.log(createAttestationRes)
+  }
+  
 
   useEffect(() => {
     const loadGapi = async () => {
@@ -211,6 +227,12 @@ const GoogleLogin = () => {
               className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
               View ZK Proof
+            </button>
+            <button
+              onClick={fn}
+              className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Create Attestation
             </button>
           </div>
         )}
