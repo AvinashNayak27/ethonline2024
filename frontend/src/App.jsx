@@ -3,6 +3,10 @@ import { loadGapiInsideDOM, loadAuth2 } from "gapi-script";
 import "./App.css";
 import "tailwindcss/tailwind.css";
 import axios from "axios";
+import { ConnectButton } from "thirdweb/react";
+import { client } from "./main";
+import { createWallet } from "thirdweb/wallets";
+import { arbitrumSepolia } from "thirdweb/chains";
 
 const UserCard = (props) => {
   const getDate = (index) => {
@@ -41,7 +45,7 @@ const ProofModal = ({ proof, isOpen, onClose }) => {
     return Object.entries(obj).map(([key, value]) => (
       <div key={key} style={{ marginLeft: `${indent * 20}px` }}>
         <span className="font-semibold">{key}: </span>
-        {typeof value === 'object' && value !== null ? (
+        {typeof value === "object" && value !== null ? (
           <div>{renderJson(value, indent + 1)}</div>
         ) : (
           <span>{JSON.stringify(value)}</span>
@@ -184,19 +188,33 @@ const GoogleLogin = () => {
       console.log("User signed out.");
     });
   };
+  const wallets = [
+    createWallet("io.metamask"),
+    createWallet("com.coinbase.wallet"),
+  ];
 
   if (user) {
     return (
       <div className="container mx-auto p-4">
         <UserCard user={user} />
         {proof && (
-          <button
-            onClick={() => setIsProofModalOpen(true)}
-            className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            View ZK Proof
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <ConnectButton
+              client={client}
+              wallets={wallets}
+              theme={"light"}
+              connectModal={{ size: "compact" }}
+              chain={arbitrumSepolia}
+            />
+            <button
+              onClick={() => setIsProofModalOpen(true)}
+              className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              View ZK Proof
+            </button>
+          </div>
         )}
+
         <ProofModal
           proof={proof}
           isOpen={isProofModalOpen}
