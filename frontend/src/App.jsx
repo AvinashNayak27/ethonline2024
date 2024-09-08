@@ -6,15 +6,10 @@ import axios from "axios";
 import { ConnectButton } from "thirdweb/react";
 import { createWallet } from "thirdweb/wallets";
 import { arbitrumSepolia } from "thirdweb/chains";
-import { SignProtocolClient, SpMode, EvmChains } from '@ethsign/sp-sdk'
+import { SignProtocolClient, SpMode, EvmChains } from "@ethsign/sp-sdk";
+import { useActiveAccount } from "thirdweb/react";
 
 const UserCard = (props) => {
-  const getDate = (index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (7 - index)); // Calculate the date for each step entry
-    return date.toLocaleDateString();
-  };
-
   return (
     <div className="p-4 bg-white rounded shadow-md">
       <img
@@ -29,7 +24,7 @@ const UserCard = (props) => {
         <ul className="list-disc list-inside">
           {props.user.steps.map((step, index) => (
             <li key={index}>
-              {getDate(index)}: {step} steps
+              "Last 3 days": {step} steps
             </li>
           ))}
         </ul>
@@ -70,28 +65,36 @@ const ProofModal = ({ proof, isOpen, onClose }) => {
   );
 };
 
-
-
 const GoogleLogin = () => {
   const [user, setUser] = useState(null);
   const [gapi, setGapi] = useState(null);
   const [proof, setProof] = useState(null);
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const activeAccount = useActiveAccount();
 
   const client = new SignProtocolClient(SpMode.OnChain, {
     chain: EvmChains.arbitrumSepolia,
-  })
+  });
 
-  const fn = async () => {
+  const createAttestation = async () => {
+    const data = {
+      provider: proof.claimInfo.provider,
+      context: proof.claimInfo.context,
+      parameters: proof.claimInfo.parameters,
+      epoch: proof.signedClaim.claim.epoch,
+      identifier: proof.signedClaim.claim.identifier,
+      owner: proof.signedClaim.claim.owner,
+      timestampS: proof.signedClaim.claim.timestampS,
+      signatures: proof.signedClaim.signatures
+    }
     const createAttestationRes = await client.createAttestation({
-      schemaId: '0xd8',
-      data: { Greet: 'Helloworld' },
-      indexingValue: "123"
+      schemaId: '0xe6',
+      data: data,
     })
     console.log(createAttestationRes)
-  }
-  
+    alert("Attestation created")
+  };
 
   useEffect(() => {
     const loadGapi = async () => {
@@ -162,11 +165,16 @@ const GoogleLogin = () => {
       console.error("Access token is missing.");
       return;
     }
+    const endTimeMillis = Date.now(); // Current time
+    const startTimeMillis = endTimeMillis - 24 * 60 * 60 * 1000 * 3; // 3 days ago
 
     try {
       const response = await axios.post(
         "http://localhost:3000/get-daily-steps",
-        {}, // No request body needed for this example
+        {
+          startTimeMillis: startTimeMillis,
+          endTimeMillis: endTimeMillis,
+        },
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -191,7 +199,7 @@ const GoogleLogin = () => {
         steps: steps,
       }));
 
-      console.log("Fitness Data:", fitnessData);
+      console.log("Fitness Data:", steps);
     } catch (error) {
       console.error("Error fetching fitness data:", error);
     }
@@ -229,8 +237,11 @@ const GoogleLogin = () => {
               View ZK Proof
             </button>
             <button
-              onClick={fn}
-              className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              onClick={createAttestation}
+              className={`mt-4 px-4 py-2 bg-green-500 text-white rounded ${
+                activeAccount?.address ? 'hover:bg-green-600' : 'opacity-50 cursor-not-allowed'
+              }`}
+              disabled={!activeAccount?.address}
             >
               Create Attestation
             </button>
