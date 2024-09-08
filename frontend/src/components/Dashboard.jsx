@@ -212,6 +212,7 @@ export default function Dashboard() {
     auth2.signOut().then(() => {
       setUser(null);
       console.log("User signed out.");
+      navigate("/");
     });
   };
 
