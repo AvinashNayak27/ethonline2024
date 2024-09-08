@@ -212,6 +212,7 @@ const GoogleLogin = () => {
       console.log("User signed out.");
     });
   };
+  
   const wallets = [
     createWallet("io.metamask"),
     createWallet("com.coinbase.wallet"),

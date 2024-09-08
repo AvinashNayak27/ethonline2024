@@ -16,15 +16,32 @@ contract OnboardingNFT is ERC721 {
     string private constant BASE64_ENCODED_IMAGE =
         "https://coral-heavy-louse-549.mypinata.cloud/ipfs/QmWa5v545dx8qBd8ep7H3RtPYLbBSsDZCCpnN3NWDBSfmv";
 
-    mapping(uint256 => uint256) public tokenOnboardingSteps;
+    // Store onboarding steps, startTime, and endTime for each token
+    struct OnboardingData {
+        uint256 steps;
+        uint256 startTime;
+        uint256 endTime;
+    }
+
+    mapping(uint256 => OnboardingData) public tokenOnboardingData;
 
     constructor() ERC721("OnboardingNFT", "ONFT") {}
 
-    function mint(address recipient, uint256 onboardingSteps) public {
+    function mint(
+        address recipient,
+        uint256 onboardingSteps,
+        uint256 startTime,
+        uint256 endTime
+    ) public {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
         _safeMint(recipient, newTokenId);
-        tokenOnboardingSteps[newTokenId] = onboardingSteps;
+
+        tokenOnboardingData[newTokenId] = OnboardingData({
+            steps: onboardingSteps,
+            startTime: startTime,
+            endTime: endTime
+        });
     }
 
     function tokenURI(uint256 tokenId)
@@ -39,6 +56,8 @@ contract OnboardingNFT is ERC721 {
             "ERC721Metadata: URI query for nonexistent token"
         );
 
+        OnboardingData memory data = tokenOnboardingData[tokenId];
+
         string memory json = Base64.encode(
             bytes(
                 string(
@@ -50,8 +69,15 @@ contract OnboardingNFT is ERC721 {
                         '"image": "',
                         BASE64_ENCODED_IMAGE,
                         '",',
-                        '"attributes": [{"trait_type": "Onboarding Steps", "value": ',
-                        tokenOnboardingSteps[tokenId].toString(),
+                        '"attributes": [',
+                        '{"trait_type": "Onboarding Steps", "value": ',
+                        data.steps.toString(),
+                        "},",
+                        '{"trait_type": "Start Time", "value": ',
+                        data.startTime.toString(),
+                        "},",
+                        '{"trait_type": "End Time", "value": ',
+                        data.endTime.toString(),
                         "}]}"
                     )
                 )
@@ -61,12 +87,21 @@ contract OnboardingNFT is ERC721 {
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
-    function getOnboardingSteps(uint256 tokenId) public view returns (uint256) {
+    function getOnboardingData(uint256 tokenId)
+        public
+        view
+        returns (
+            uint256 steps,
+            uint256 startTime,
+            uint256 endTime
+        )
+    {
         require(
             _doesExist(tokenId),
             "ERC721Metadata: Query for nonexistent token"
         );
-        return tokenOnboardingSteps[tokenId];
+        OnboardingData memory data = tokenOnboardingData[tokenId];
+        return (data.steps, data.startTime, data.endTime);
     }
 
     function _doesExist(uint256 tokenId) internal view returns (bool) {

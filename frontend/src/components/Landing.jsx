@@ -53,9 +53,8 @@ export default function LandingPage() {
       profileImg: profileImg,
       steps: [],
     });
-
-    fetchFitnessData(googleUser);
   };
+
 
   const attachSignin = (element, auth2) => {
     auth2.attachClickHandler(
@@ -68,21 +67,6 @@ export default function LandingPage() {
         console.error("Error attaching sign-in:", error);
       }
     );
-  };
-
-  // Add a new function to handle button clicks
-  const handleSignInClick = (event) => {
-    event.preventDefault();
-    if (gapi && gapi.auth2) {
-      const auth2 = gapi.auth2.getAuthInstance();
-      if (auth2) {
-        attachSignin(event.target, auth2);
-      } else {
-        console.error("Auth2 instance not available");
-      }
-    } else {
-      console.error("GAPI or Auth2 not loaded");
-    }
   };
 
   if (user) {
@@ -116,7 +100,7 @@ export default function LandingPage() {
           </div>
           <button
             className="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition"
-            onClick={handleSignInClick}
+            id="customBtn"
           >
             Get Started
           </button>
@@ -134,7 +118,7 @@ export default function LandingPage() {
           </p>
           <button
             className="bg-indigo-600 text-white px-8 py-3 rounded-full text-lg font-semibold hover:bg-indigo-700 transition inline-flex items-center"
-            onClick={handleSignInClick}
+            id="customBtn"
           >
             Start Your Journey <ArrowRight className="ml-2" />
           </button>

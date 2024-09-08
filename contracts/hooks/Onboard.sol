@@ -32,6 +32,7 @@ interface ISPInterface {
 interface IERC721 {
     function mint(address recipient, uint256 onboardingSteps) external;
 }
+
 // @dev This contract implements the actual schema hook.
 contract OnboardingHook is ISPHook {
     event AttestationReceived(
@@ -53,9 +54,8 @@ contract OnboardingHook is ISPHook {
     address public ispContractAddress =
         0x4e4af2a21ebf62850fD99Eb6253E1eFBb56098cD;
     address public reclaimAddress = 0x4D1ee04EB5CeE02d4C123d4b67a86bDc7cA2E62A;
-    address public onboardingNFTAddress = 0x9E4975988e829B3518eF0B0b6Ba8745dfC451D46;
-    string constant TARGET_URL =
-        "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate}'";
+    address public onboardingNFTAddress =
+        0xeBA4810D49611EBE7F1D6fAd94DC118819022408;
 
     // Assuming you have an interface for the ERC721 contract
 
@@ -72,30 +72,32 @@ contract OnboardingHook is ISPHook {
 
         // Try to verify the proof
         try Reclaim(reclaimAddress).verifyProof(proof) {
-                // Check if the proof's timestampS has already been used
-                uint256 timestamp = proof.signedClaim.claim.timestampS;
-                require(
-                    !usedTimestamps[timestamp],
-                    "This proof has already been used"
-                );
+            // Check if the proof's timestampS has already been used
+            uint256 timestamp = proof.signedClaim.claim.timestampS;
+            require(
+                !usedTimestamps[timestamp],
+                "This proof has already been used"
+            );
 
-                // Mark the timestamp as used
-                usedTimestamps[timestamp] = true;
+            // Mark the timestamp as used
+            usedTimestamps[timestamp] = true;
 
-                // Retrieve step count if all conditions are met
-                uint256 stepCount = getStepCount(proof.claimInfo.parameters);
+            // Retrieve step count if all conditions are met
+            uint256 stepCount = getStepCount(proof.claimInfo.parameters);
+            uint256 startTime = getStartTimeMillis(proof.claimInfo.parameters);
+            uint256 endTime = getEndTimeMillis(proof.claimInfo.parameters);
 
-                // Call the ERC721 mint function
-                IERC721 erc721Contract = IERC721(onboardingNFTAddress);
-                erc721Contract.mint(attester, stepCount);
+            // Call the ERC721 mint function
+            IERC721 erc721Contract = IERC721(onboardingNFTAddress);
+            erc721Contract.mint(attester, stepCount, startTime, endTime);
 
-                // Emit the event with attestation and extraData
-                emit AttestationReceived(
-                    attester,
-                    schemaId,
-                    attestationId,
-                    abi.encodePacked(extraData, stepCount)
-                );
+            // Emit the event with attestation and extraData
+            emit AttestationReceived(
+                attester,
+                schemaId,
+                attestationId,
+                abi.encodePacked(extraData, stepCount, startTime, endTime)
+            );
         } catch {
             revert("Invalid proof");
         }
@@ -191,14 +193,13 @@ contract OnboardingHook is ISPHook {
         );
     }
 
-
-    function extractFieldFromContext(string memory data)
+    function extractFieldFromContext(string memory data, string memory target)
         public
         pure
         returns (uint256)
     {
         bytes memory dataBytes = bytes(data);
-        bytes memory targetBytes = bytes("intVal");
+        bytes memory targetBytes = bytes(target);
 
         require(
             dataBytes.length >= targetBytes.length,
@@ -270,8 +271,35 @@ contract OnboardingHook is ISPHook {
 
     // Function to get step count from a data string
     function getStepCount(string memory data) public pure returns (uint256) {
-        uint256 stepCount = extractFieldFromContext(data);
+        // Extract the string after "intVal:"
+        uint256 stepCount = extractFieldFromContext(data, "intVal");
+        // Convert the extracted string into a uint256
         return stepCount;
     }
 
+    function getStartTimeMillis(string memory data)
+        public
+        pure
+        returns (uint256)
+    {
+        // Extract the string after "intVal:"
+        uint256 startTimeMillis = extractFieldFromContext(
+            data,
+            "startTimeMillis"
+        );
+        // Convert the extracted string into a uint256
+        return startTimeMillis;
+    }
+
+    function getEndTimeMillis(string memory data)
+        public
+        pure
+        returns (uint256)
+    {
+        // Extract the string after "intVal:"
+        uint256 endTimeMillis = extractFieldFromContext(data, "endTimeMillis");
+        // Convert the extracted string into a uint256
+        return endTimeMillis;
+    }
 }
+
