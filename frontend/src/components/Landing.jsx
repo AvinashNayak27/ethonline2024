@@ -1,20 +1,125 @@
-import { ArrowRight, Activity, Trophy, Users } from 'lucide-react'
+import { ArrowRight, Activity, Trophy, Users } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { loadGapiInsideDOM, loadAuth2 } from "gapi-script";
+import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
-    
+  const [gapi, setGapi] = useState(null);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    const loadGapi = async () => {
+      try {
+        const newGapi = await loadGapiInsideDOM();
+        setGapi(newGapi);
+      } catch (error) {
+        console.error("Error loading GAPI:", error);
+      }
+    };
+    loadGapi();
+  }, []);
+
+  useEffect(() => {
+    if (!gapi) return;
+
+    const setAuth2 = async () => {
+      try {
+        const auth2 = await loadAuth2(gapi, GOOGLE_CLIENT_ID, "", {
+          scope:
+            "https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read https://www.googleapis.com/auth/fitness.location.read",
+        });
+
+        if (auth2.isSignedIn.get()) {
+          updateUser(auth2.currentUser.get());
+        } else {
+          attachSignin(document.getElementById("customBtn"), auth2);
+        }
+      } catch (error) {
+        console.error("Error setting up auth2:", error);
+      }
+    };
+    setAuth2();
+  }, [gapi]);
+
+  const updateUser = (googleUser) => {
+    const profile = googleUser.getBasicProfile();
+    const name = profile.getName();
+    const profileImg = profile.getImageUrl();
+
+    setUser({
+      name: name,
+      profileImg: profileImg,
+      steps: [],
+    });
+
+    fetchFitnessData(googleUser);
+  };
+
+  const attachSignin = (element, auth2) => {
+    auth2.attachClickHandler(
+      element,
+      {},
+      (googleUser) => {
+        updateUser(googleUser);
+      },
+      (error) => {
+        console.error("Error attaching sign-in:", error);
+      }
+    );
+  };
+
+  // Add a new function to handle button clicks
+  const handleSignInClick = (event) => {
+    event.preventDefault();
+    if (gapi && gapi.auth2) {
+      const auth2 = gapi.auth2.getAuthInstance();
+      if (auth2) {
+        attachSignin(event.target, auth2);
+      } else {
+        console.error("Auth2 instance not available");
+      }
+    } else {
+      console.error("GAPI or Auth2 not loaded");
+    }
+  };
+
+  if (user) {
+    navigate("/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
       <header className="container mx-auto px-6 py-8">
         <nav className="flex items-center justify-between">
           <div className="text-3xl font-bold text-indigo-600">Verifit</div>
           <div className="hidden md:flex space-x-6">
-            <a href="#features" className="text-gray-600 hover:text-indigo-600 transition">Features</a>
-            <a href="#how-it-works" className="text-gray-600 hover:text-indigo-600 transition">How It Works</a>
-            <a href="#testimonials" className="text-gray-600 hover:text-indigo-600 transition">Testimonials</a>
+            <a
+              href="#features"
+              className="text-gray-600 hover:text-indigo-600 transition"
+            >
+              Features
+            </a>
+            <a
+              href="#how-it-works"
+              className="text-gray-600 hover:text-indigo-600 transition"
+            >
+              How It Works
+            </a>
+            <a
+              href="#testimonials"
+              className="text-gray-600 hover:text-indigo-600 transition"
+            >
+              Testimonials
+            </a>
           </div>
-          <a href="/login" className="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition">
+          <button
+            className="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition"
+            onClick={handleSignInClick}
+          >
             Get Started
-          </a>
+          </button>
         </nav>
       </header>
 
@@ -24,28 +129,34 @@ export default function LandingPage() {
             Achieve Your Fitness Goals with Accountability
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Verifit helps you stay on track with your fitness journey through social accountability and personalized challenges.
+            Verifit helps you stay on track with your fitness journey through
+            social accountability and personalized challenges.
           </p>
-          <a href="/signup" className="bg-indigo-600 text-white px-8 py-3 rounded-full text-lg font-semibold hover:bg-indigo-700 transition inline-flex items-center">
+          <button
+            className="bg-indigo-600 text-white px-8 py-3 rounded-full text-lg font-semibold hover:bg-indigo-700 transition inline-flex items-center"
+            onClick={handleSignInClick}
+          >
             Start Your Journey <ArrowRight className="ml-2" />
-          </a>
+          </button>
         </section>
 
         <section id="features" className="bg-white py-16">
           <div className="container mx-auto px-6">
-            <h2 className="text-3xl font-bold text-center mb-12">Why Choose Verifit?</h2>
+            <h2 className="text-3xl font-bold text-center mb-12">
+              Why Choose Verifit?
+            </h2>
             <div className="grid md:grid-cols-3 gap-8">
-              <FeatureCard 
+              <FeatureCard
                 icon={<Activity className="w-12 h-12 text-indigo-600" />}
                 title="Track Your Progress"
                 description="Easily log your daily activities and see your improvement over time."
               />
-              <FeatureCard 
+              <FeatureCard
                 icon={<Trophy className="w-12 h-12 text-indigo-600" />}
                 title="Set Personal Challenges"
                 description="Create custom challenges to push yourself further and achieve new milestones."
               />
-              <FeatureCard 
+              <FeatureCard
                 icon={<Users className="w-12 h-12 text-indigo-600" />}
                 title="Community Support"
                 description="Connect with like-minded individuals and motivate each other to succeed."
@@ -54,26 +165,55 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="py-16 bg-gradient-to-br from-indigo-50 to-purple-50">
+        <section
+          id="how-it-works"
+          className="py-16 bg-gradient-to-br from-indigo-50 to-purple-50"
+        >
           <div className="container mx-auto px-6">
-            <h2 className="text-3xl font-bold text-center mb-12">How Verifit Works</h2>
+            <h2 className="text-3xl font-bold text-center mb-12">
+              How Verifit Works
+            </h2>
             <div className="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-12">
               <div className="w-full md:w-1/2">
-                <img src="https://coral-heavy-louse-549.mypinata.cloud/ipfs/QmWa5v545dx8qBd8ep7H3RtPYLbBSsDZCCpnN3NWDBSfmv" alt="How Verifit Works" className="rounded-lg shadow-lg" />
+                <img
+                  src="https://coral-heavy-louse-549.mypinata.cloud/ipfs/QmWa5v545dx8qBd8ep7H3RtPYLbBSsDZCCpnN3NWDBSfmv"
+                  alt="How Verifit Works"
+                  className="rounded-lg shadow-lg"
+                />
               </div>
               <div className="w-full md:w-1/2 space-y-4">
-                <Step number={1} title="Sign Up" description="Create your account and set your fitness goals." />
-                <Step number={2} title="Connect" description="Sync your google fitness activity and attest daily." />
-                <Step number={3} title="Challenge" description="Create or join challenges to push your limits." />
-                <Step number={4} title="Verify" description="Attest your progress daily to stay accountable." />
-                <Step number={5} title="Succeed" description="Achieve your goals and celebrate your success!" />
+                <Step
+                  number={1}
+                  title="Sign Up"
+                  description="Create your account and set your fitness goals."
+                />
+                <Step
+                  number={2}
+                  title="Connect"
+                  description="Sync your google fitness activity and attest daily."
+                />
+                <Step
+                  number={3}
+                  title="Challenge"
+                  description="Create or join challenges to push your limits."
+                />
+                <Step
+                  number={4}
+                  title="Verify"
+                  description="Attest your progress daily to stay accountable."
+                />
+                <Step
+                  number={5}
+                  title="Succeed"
+                  description="Achieve your goals and celebrate your success!"
+                />
               </div>
             </div>
           </div>
         </section>
       </main>
     </div>
-  )
+  );
 }
 
 function FeatureCard({ icon, title, description }) {
@@ -83,7 +223,7 @@ function FeatureCard({ icon, title, description }) {
       <h3 className="text-xl font-semibold mb-2 text-center">{title}</h3>
       <p className="text-gray-600 text-center">{description}</p>
     </div>
-  )
+  );
 }
 
 function Step({ number, title, description }) {
@@ -97,5 +237,5 @@ function Step({ number, title, description }) {
         <p className="text-gray-600">{description}</p>
       </div>
     </div>
-  )
+  );
 }
