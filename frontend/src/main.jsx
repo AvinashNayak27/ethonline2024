@@ -8,6 +8,7 @@ import Bets from "./components/Bets.jsx";
 import History from "./components/History.jsx";
 import Dashboard from "./components/dashboard.jsx";
 import Landing from "./components/Landing.jsx";
+import ViewBets from "./components/ViewBets.jsx";
 
 export const client = createThirdwebClient({
   clientId: "55a6504e889b8d8708ede6dd50c2f831",
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/bets" element={<Bets />} />
           <Route path="/history" element={<History />} />
+          <Route path="/view-bets" element={<ViewBets />} />
         </Routes>
       </BrowserRouter>
     </ThirdwebProvider>

@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { ArrowRight, Activity, Trophy, TrendingUp, LogOut, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Activity,
+  Trophy,
+  TrendingUp,
+  LogOut,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { loadGapiInsideDOM, loadAuth2 } from "gapi-script";
 import {
@@ -83,7 +90,10 @@ export default function Dashboard() {
 
   const fetchFitnessHistory = async () => {
     setIsLoading(true);
-    const authResponse = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse(true);
+    const authResponse = gapi.auth2
+      .getAuthInstance()
+      .currentUser.get()
+      .getAuthResponse(true);
     const accessToken = authResponse.access_token;
 
     try {
@@ -96,10 +106,12 @@ export default function Dashboard() {
       const historyData = response.data.proofs.map((proof, index) => {
         const date = new Date();
         date.setDate(date.getDate() - index);
-        const formattedDate = date.toISOString().split('T')[0];
+        const formattedDate = date.toISOString().split("T")[0];
 
         const JsonProof = JSON.parse(proof.claimInfo.parameters);
-        const steps = JSON.parse(JsonProof.responseMatches[0].value).bucket[0].dataset[0].point.reduce(
+        const steps = JSON.parse(
+          JsonProof.responseMatches[0].value
+        ).bucket[0].dataset[0].point.reduce(
           (total, point) => total + point.value[0].intVal,
           0
         );
@@ -122,7 +134,7 @@ export default function Dashboard() {
   };
 
   const attestData = async (date) => {
-    const dayData = fitnessData.find(day => day.date === date);
+    const dayData = fitnessData.find((day) => day.date === date);
     if (!dayData) return;
 
     try {
@@ -149,8 +161,8 @@ export default function Dashboard() {
       console.log(createAttestationRes);
       alert("Attestation created successfully");
 
-      setFitnessData(prevData =>
-        prevData.map(day =>
+      setFitnessData((prevData) =>
+        prevData.map((day) =>
           day.date === date ? { ...day, attested: true } : day
         )
       );
@@ -315,7 +327,10 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
                 <OverviewCard
                   title="Last 7 Day Steps"
-                  value={user?.steps?.reduce((total, steps) => total + steps, 0)}
+                  value={user?.steps?.reduce(
+                    (total, steps) => total + steps,
+                    0
+                  )}
                   icon={<Activity className="h-6 w-6 text-indigo-600" />}
                   proof={proof}
                 />
@@ -332,12 +347,18 @@ export default function Dashboard() {
               </div>
 
               {/* Quick Links */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
                 <QuickLinkCard
                   title="Create a New Bet"
                   description="Challenge yourself or compete with friends"
                   link="/bets"
                   linkText="Create Bet"
+                />
+                <QuickLinkCard
+                  title="View Your Bets"
+                  description="See your on-going bets"
+                  link="/view-bets"
+                  linkText="View Bets"
                 />
                 <QuickLinkCard
                   title="View Your History"
@@ -368,7 +389,9 @@ export default function Dashboard() {
                               <div>
                                 <span
                                   className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
-                                    day.attested ? "bg-indigo-500" : "bg-indigo-300"
+                                    day.attested
+                                      ? "bg-indigo-500"
+                                      : "bg-indigo-300"
                                   }`}
                                 >
                                   <Activity
@@ -401,7 +424,9 @@ export default function Dashboard() {
                                       Attest
                                     </button>
                                   ) : (
-                                    <span className="text-green-500">Attested</span>
+                                    <span className="text-green-500">
+                                      Attested
+                                    </span>
                                   )}
                                 </div>
                               </div>
